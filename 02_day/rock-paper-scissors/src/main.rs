@@ -17,17 +17,18 @@ fn main() {
     println!("The total player score is: {total_player_score}.");
 }
 
-fn load_strategy_guide<P>(file: P) -> HashMap<u32, (Shape, Shape)>
+fn load_strategy_guide<P>(file: P) -> HashMap<u32, (Shape, RoundOutcome)>
 where
     P: AsRef<Path>,
 {
     /*!
      * Load the given strategy guide from an external CSV file. Return a
      * dictionary holding an u32 round ID, and tuples of Shapes for the
-     * opponent's and plyer's choices.
+     * opponent's choice and RoundOutcomes for the round outcome that has to
+     * be achieved.
      */
 
-    let mut strategy_guide: HashMap<u32, (Shape, Shape)> = HashMap::new();
+    let mut strategy_guide: HashMap<u32, (Shape, RoundOutcome)> = HashMap::new();
 
     let mut csv_reader = csv::ReaderBuilder::new()
         .has_headers(false)
@@ -38,21 +39,21 @@ where
 
     for record in csv_reader.records() {
         if let Ok(entry) = record {
-            if let (Some(opponent_move), Some(player_move)) = (entry.get(0), entry.get(1)) {
+            if let (Some(opponent_move), Some(player_outcome)) = (entry.get(0), entry.get(1)) {
                 let opponent_shape = match opponent_move {
                     "A" => Shape::Rock,
                     "B" => Shape::Paper,
                     "C" => Shape::Scissors,
                     _ => panic!("Unkown move found for opponent: {opponent_move}."),
                 };
-                let player_shape = match player_move {
-                    "X" => Shape::Rock,
-                    "Y" => Shape::Paper,
-                    "Z" => Shape::Scissors,
-                    _ => panic!("Unkown move found for player: {player_move}."),
+                let target_outcome = match player_outcome {
+                    "X" => RoundOutcome::OpponentWon,
+                    "Y" => RoundOutcome::Tie,
+                    "Z" => RoundOutcome::PlayerWon,
+                    _ => panic!("Unkown move found for player: {player_outcome}."),
                 };
 
-                strategy_guide.insert(round_id, (opponent_shape, player_shape));
+                strategy_guide.insert(round_id, (opponent_shape, target_outcome));
                 round_id += 1;
             }
         }
@@ -61,7 +62,7 @@ where
     return strategy_guide;
 }
 
-fn calculate_total_score(strategy_guide: HashMap<u32, (Shape, Shape)>) -> u64 {
+fn calculate_total_score(strategy_guide: HashMap<u32, (Shape, RoundOutcome)>) -> u64 {
     /*!
      * Given a provided strategy, calculate the total player score for all rounds.
      */
@@ -71,22 +72,67 @@ fn calculate_total_score(strategy_guide: HashMap<u32, (Shape, Shape)>) -> u64 {
     return total_shape_score + total_contest_score;
 }
 
-fn get_total_contest_score(strategy_guide: &HashMap<u32, (Shape, Shape)>) -> u64 {
+fn get_total_contest_score(strategy_guide: &HashMap<u32, (Shape, RoundOutcome)>) -> u64 {
     /*!
      * Determines the total score of all the opponent vs player contests.
      */
 
-    let round_outcomes: Vec<RoundOutcome> = strategy_guide
+    let total_contest_score = strategy_guide
         .values()
-        .map(determine_round_winner)
-        .collect();
-
-    let total_contest_score = round_outcomes.iter().map(get_outcome_value).sum::<u64>();
+        .map(|strategy| get_outcome_value(&strategy.1))
+        .sum();
 
     return total_contest_score;
 }
 
-fn determine_round_winner(round_choice_pair: &(Shape, Shape)) -> RoundOutcome {
+fn get_outcome_value(round_outcome: &RoundOutcome) -> u64 {
+    /*!
+     * Convert each RoundOutcome to a numeric value,
+     */
+
+    let value = match round_outcome {
+        RoundOutcome::OpponentWon => 0,
+        RoundOutcome::Tie => 3,
+        RoundOutcome::PlayerWon => 6,
+    };
+
+    return value;
+}
+
+fn get_total_shape_value(strategy_guide: &HashMap<u32, (Shape, RoundOutcome)>) -> u64 {
+    /*!
+     * Takes all the shapes the player's played in the strategy guide and
+     * retunrs their total value. This is added to the scores obtained from
+     * the results of each individual round, giving the total tournament score.
+     */
+
+    let total_shape_value = strategy_guide
+        .values()
+        .map(|strategy| {
+            let player_shape = choose_player_shape(&strategy.0, &strategy.1);
+            return get_single_shape_value(&player_shape);
+        })
+        .sum();
+
+    return total_shape_value;
+}
+
+fn choose_player_shape(opponent_shape: &Shape, target_outcome: &RoundOutcome) -> Shape {
+    /*!
+     * Choose a shape which the player has to play in order for the target
+     * round outcome to be achieved.
+     */
+
+    for player_shape in [Shape::Paper, Shape::Rock, Shape::Scissors] {
+        let outcome = determine_round_winner((opponent_shape, &player_shape));
+        if &outcome == target_outcome {
+            return player_shape;
+        }
+    }
+    panic!("Unable to find adequate shape for target outcome.");
+}
+
+fn determine_round_winner(round_choice_pair: (&Shape, &Shape)) -> RoundOutcome {
     /*!
      * Takes a pair of RoundOutcome variants representing the opponent's shape
      * choice and the player's shape choice, and returns an enum telling whether
@@ -106,35 +152,6 @@ fn determine_round_winner(round_choice_pair: &(Shape, Shape)) -> RoundOutcome {
     return outcome;
 }
 
-fn get_outcome_value(round_outcome: &RoundOutcome) -> u64 {
-    /*!
-     * Convert each RoundOutcome to a numeric value,
-     */
-
-    let value = match round_outcome {
-        RoundOutcome::PlayerWon => 6,
-        RoundOutcome::OpponentWon => 0,
-        RoundOutcome::Tie => 3,
-    };
-
-    return value;
-}
-
-fn get_total_shape_value(strategy_guide: &HashMap<u32, (Shape, Shape)>) -> u64 {
-    /*!
-     * Takes all the shapes the player's played in the strategy guide and
-     * retunrs their total value. This is added to the scores obtained from
-     * the results of each individual round, giving the total tournament score.
-     */
-
-    let total_shape_value: u64 = strategy_guide
-        .values()
-        .map(|shape_tuple| get_single_shape_value(&shape_tuple.1))
-        .sum();
-
-    return total_shape_value;
-}
-
 fn get_single_shape_value(shape: &Shape) -> u64 {
     /*!
      * Fetch the value of a single given shape
@@ -148,6 +165,7 @@ fn get_single_shape_value(shape: &Shape) -> u64 {
     return value;
 }
 
+#[derive(PartialEq)]
 enum RoundOutcome {
     PlayerWon,
     OpponentWon,
