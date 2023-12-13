@@ -1,4 +1,5 @@
 use csv;
+use std::collections::hash_set::HashSet;
 use std::fs::File;
 use std::ops::RangeInclusive;
 use std::path::Path;
@@ -10,7 +11,7 @@ fn main() {
     for elf_pair in sector_duties.records() {
         if let Ok(sectors) = elf_pair {
             let elf_sectors = parse_record(sectors);
-            let is_fully_contained = is_range_fully_contained(elf_sectors);
+            let is_fully_contained = are_ranges_overlapping(elf_sectors);
             range_evaluations.push(is_fully_contained);
         }
     }
@@ -79,29 +80,18 @@ fn parse_record(record: csv::StringRecord) -> (RangeInclusive<usize>, RangeInclu
     return (range_elf_1, range_elf_2);
 }
 
-fn is_range_fully_contained(range_pair: (RangeInclusive<usize>, RangeInclusive<usize>)) -> bool {
+fn are_ranges_overlapping(range_pair: (RangeInclusive<usize>, RangeInclusive<usize>)) -> bool {
     /*!
-     * Determines whether the ranges are completely overlapping. I.e. is range
-     * 1 fully contained in range 2, or the other way around.
+     * Determines whether the two ranges overlap or not (irrespective of
+     * whether the overlap is complete or not).
      */
 
-    let mut range_1: Vec<usize> = range_pair.0.collect();
-    range_1.sort();
+    let elems_range_1: HashSet<usize> = range_pair.0.collect();
+    let elems_range_2: HashSet<usize> = range_pair.1.collect();
 
-    let range_1_min = range_1[0];
-    let range_1_max = range_1.last();
-
-    let mut range_2: Vec<usize> = range_pair.1.collect();
-    range_2.sort();
-
-    let range_2_min = range_2[0];
-    let range_2_max = range_2.last();
-
-    if (range_1_min <= range_2_min) & (range_2_max <= range_1_max) {
-        return true;
-    } else if (range_2_min <= range_1_min) & (range_1_max <= range_2_max) {
-        return true;
-    } else {
+    if elems_range_1.intersection(&elems_range_2).count() == 0 {
         return false;
+    } else {
+        return true;
     }
 }
