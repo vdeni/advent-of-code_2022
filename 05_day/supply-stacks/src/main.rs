@@ -20,8 +20,8 @@ fn main() {
             cargo_composition_lines.push(cargo);
         }
     }
-    let mut cargo_composition = load_cargo_composition(cargo_composition_lines);
 
+    let mut cargo_composition = load_cargo_composition(cargo_composition_lines);
     println!("{cargo_composition:?}");
 }
 
@@ -41,7 +41,11 @@ fn load_cargo_composition(cargo_lines: Vec<String>) -> HashMap<usize, Vec<String
         let cargo_row = line.split(' ');
 
         for (cargo_idx, cargo) in cargo_row.enumerate() {
-            let cargo: String = cargo.replace("[", "").replace("]", "");
+            let cargo = cargo.replace("[", "").replace("]", "");
+
+            if cargo == String::from("") {
+                continue;
+            }
 
             if let Some(cargo_stack) = cargo_map.get_mut(&cargo_idx) {
                 cargo_stack.push(cargo);
@@ -54,8 +58,8 @@ fn load_cargo_composition(cargo_lines: Vec<String>) -> HashMap<usize, Vec<String
     return cargo_map;
 }
 
-// fn load_cargo_operations() {
-//     /*!
-//      * Read the data file and parse the order of cargo operations.
-//      */
-// }
+fn load_cargo_operations() {
+    /*!
+     * Read the data file and parse the order of cargo operations.
+     */
+}
