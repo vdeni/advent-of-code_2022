@@ -137,7 +137,6 @@ fn execute_cargo_operations(
         cargo_from.extend(cargo_to_keep);
 
         let cargo_to = cargo_state.get_mut(&(operation.to - 1)).unwrap();
-        cargo_to_move.reverse();
         cargo_to.extend(cargo_to_move);
     }
 
