@@ -15,21 +15,21 @@ fn read_data(path: &Path) -> String {
 }
 
 fn find_marker(stream: String) -> () {
-    let mut marker_tracker: HashSet<char> = HashSet::new();
+    let mut char_counter: usize = 0;
+    let stream_as_chars: Vec<char> = stream.chars().collect();
+    loop {
+        let candidate = &stream_as_chars[char_counter..(char_counter + 14)];
 
-    for (idx, char) in stream.chars().enumerate() {
-        if marker_tracker.contains(&char) {
-            println!("Found: {char}. Clearing marker_tracker.");
-            marker_tracker.clear();
-            marker_tracker.insert(char);
+        let candidate_uniques: HashSet<char> = HashSet::from_iter(candidate.iter().cloned());
+
+        if candidate_uniques.len() == 14 {
+            println!(
+                "Found message marker: {candidate_uniques:?}, after character {char_cnt}",
+                char_cnt = char_counter + 14
+            );
+            break;
         } else {
-            marker_tracker.insert(char);
-            println!("inserted {char}");
-
-            if marker_tracker.len() == 4 {
-                println!("Marker found at character number {}.", idx + 1);
-                break;
-            }
+            char_counter += 1;
         }
     }
 }
