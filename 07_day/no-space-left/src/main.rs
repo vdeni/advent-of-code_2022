@@ -131,11 +131,6 @@ fn calculate_directory_size(
                 dir_size += file.size;
             }
             FSElem::Dir(dir) => {
-                // TODO: ovo je krivo. izrada target path ne valja, ali osim toga,
-                // ovako će iterirati samo po trivijalnim pathovima (/a, /d), ali
-                // ne i po dubljima. iterirati po fs_map?
-                // cijeli ovaj dio ne radi jer se sad u fs_map spremaju imena poput
-                // //a/b, a direktoriji su "a"
                 let mut target_path = directory_name.clone();
                 target_path.push_str("/");
                 target_path.push_str(&dir.name);
@@ -158,7 +153,6 @@ fn calculate_total_directory_sizes(file_tree: HashMap<String, FSTree>) -> HashMa
     let mut dir_sizes: HashMap<String, usize> = HashMap::new();
 
     for (dir_name, dir) in &file_tree {
-        // možda dodati da se i ovaj dir_name šalje?
         let dirsize = calculate_directory_size(dir_name.clone(), dir, &file_tree);
         dir_sizes.insert(dir_name.clone(), dirsize);
     }
