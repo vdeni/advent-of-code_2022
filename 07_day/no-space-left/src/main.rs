@@ -3,6 +3,9 @@ use std::fs::File;
 use std::io::{self, BufRead, BufReader};
 use std::path::Path;
 
+const TOTAL_SPACE: usize = 70_000_000;
+const NEEDED_SPACE: usize = 30_000_000;
+
 fn main() {
     let data_path = Path::new("data/data.txt");
 
@@ -14,18 +17,18 @@ fn main() {
 
     let dir_sizes = calculate_total_directory_sizes(file_tree);
 
-    let total_size = dir_sizes
-        .iter()
-        .filter(|dir| {
-            if dir.1 <= &100000 {
-                return true;
-            } else {
-                return false;
-            }
-        })
-        .fold(0, |accumulator, elem| accumulator + elem.1);
+    let root_dir_size = dir_sizes.get("/").unwrap();
 
-    println!("{total_size}");
+    let unused_space = TOTAL_SPACE - root_dir_size;
+
+    let space_needed = NEEDED_SPACE - unused_space;
+
+    let smallest_dir = dir_sizes
+        .iter()
+        .filter(|dir| dir.1 >= &space_needed)
+        .min_by_key(|dir| dir.1);
+
+    println!("{smallest_dir:?}");
 }
 
 fn read_input(file_path: &Path) -> io::Lines<BufReader<File>> {
