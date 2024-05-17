@@ -5,12 +5,9 @@ use std::path::Path;
 
 fn main() {
     let input_data = read_data(&Path::new("data/data.txt"));
-    let visibilities = input_data.get_tree_visibilities();
+    let scenic_scores = input_data.get_tree_scenic_scores();
 
-    println!(
-        "{}",
-        visibilities.iter().map(|eval| *eval as u32).sum::<u32>()
-    );
+    println!("{}", scenic_scores.iter().max().unwrap());
 }
 
 fn read_data(file_path: &Path) -> Matrix {
@@ -71,45 +68,66 @@ impl Matrix {
         return row;
     }
 
-    fn determine_tree_visibility(&self, tree_row: usize, tree_col: usize) -> bool {
+    fn determine_scenic_score(&self, tree_row: usize, tree_col: usize) -> usize {
         // return early if it's a tree in the top or bottom row
         if tree_row == 1 || tree_row == self.num_rows {
-            return true;
+            return 0;
         }
 
         // return early if it's a tree in the left or right column
         if tree_col == 1 || tree_col == self.num_cols {
-            return true;
+            return 0;
         }
 
         let target_tree_row = self.get_row(tree_row);
-        let tree_row_left = &target_tree_row[..(tree_col - 1)];
-        let tree_row_right = &target_tree_row[(tree_col)..];
+
+        // reversed so that trees nearer to the target are at the beginning of
+        // the slice
+        let mut tree_row_left: Vec<u32> = vec![];
+        target_tree_row[..(tree_col - 1)].clone_into(&mut tree_row_left);
+        tree_row_left.reverse();
+
+        let mut tree_row_right: Vec<u32> = vec![];
+        target_tree_row[(tree_col)..].clone_into(&mut tree_row_right);
 
         let target_tree_col = self.get_column(tree_col);
-        let tree_col_up = &target_tree_col[..(tree_row - 1)];
-        let tree_col_down = &target_tree_col[(tree_row)..];
+
+        let mut tree_col_up: Vec<u32> = vec![];
+        target_tree_col[..(tree_row - 1)].clone_into(&mut tree_col_up);
+        tree_col_up.reverse();
+
+        let mut tree_col_down: Vec<u32> = vec![];
+        target_tree_col[(tree_row)..].clone_into(&mut tree_col_down);
 
         let target_tree = &self[[tree_row, tree_col]];
 
+        let mut scenic_score = 1;
+
         for grid_part in [tree_row_left, tree_row_right, tree_col_up, tree_col_down] {
-            if grid_part.iter().max().unwrap() < target_tree {
-                return true;
+            let mut num_trees = 0;
+            for tree in &grid_part {
+                num_trees += 1;
+
+                if tree >= target_tree {
+                    break;
+                }
             }
+
+            scenic_score *= num_trees;
         }
 
-        return false;
+        return scenic_score;
     }
 
-    fn get_tree_visibilities(&self) -> Vec<bool> {
-        let mut visibilities: Vec<bool> = vec![];
+    fn get_tree_scenic_scores(&self) -> Vec<usize> {
+        let mut scenic_scores: Vec<usize> = vec![];
         for i in 1..=self.num_rows {
             for j in 1..=self.num_cols {
-                visibilities.push(self.determine_tree_visibility(i, j));
+                scenic_scores.push(self.determine_scenic_score(i, j));
             }
         }
 
-        return visibilities;
+        return scenic_scores;
     }
 }
 
